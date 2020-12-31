@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+
+final authRepository = AuthRepository();
 
 void main() {
   runApp(MyApp());
@@ -24,7 +27,10 @@ class LoginPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text('LoginPage')),
       body: Center(
-        child: Text('login page')
+        child: RaisedButton(
+          child: Text('login'),
+          onPressed: () {authRepository.setAuthState(AuthState.Authenticated);},
+        )
       ),
     );
   }
@@ -36,7 +42,16 @@ class MainPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text('MainPage')),
       body: Center(
-          child: Text('main page')
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Main Page'),
+            RaisedButton(
+              child: Text('logout'),
+              onPressed: () {authRepository.setAuthState(AuthState.UnAuthenticated);},
+            )
+          ],
+        ),
       ),
     );
   }
@@ -44,12 +59,27 @@ class MainPage extends StatelessWidget {
 
 enum AuthState { Authenticated, UnAuthenticated }
 
+class AuthRepository {
+  final _streamController = StreamController<AuthState>()..add(AuthState.UnAuthenticated);
+
+  get authStream => _streamController.stream;
+
+  void setAuthState(AuthState state) {
+    _streamController.add(state);
+  }
+}
+
 class RootPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Root')),
-      body: Scaffold()
+    return StreamBuilder<AuthState>(
+      stream: authRepository.authStream,
+      builder: (BuildContext context, AsyncSnapshot snapshot) {
+        if (snapshot.data == AuthState.UnAuthenticated) {
+          return LoginPage();
+        }
+        return MainPage();
+      }
     );
   }
 }
