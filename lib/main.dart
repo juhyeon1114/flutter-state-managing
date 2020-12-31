@@ -1,11 +1,25 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-final authRepository = AuthRepository();
+enum AuthState { Authenticated, UnAuthenticated }
 
-void main() {
-  runApp(MyApp());
+class AuthRepository with ChangeNotifier {
+  AuthState authState = AuthState.UnAuthenticated;
+
+  void setState(AuthState state) {
+    authState = state;
+    notifyListeners();
+  }
 }
+
+void main() => runApp(
+  MultiProvider(
+    child: MyApp(),
+    providers: [
+      ChangeNotifierProvider.value(value: AuthRepository())
+    ],
+  )
+);
 
 class MyApp extends StatelessWidget {
   @override
@@ -29,7 +43,9 @@ class LoginPage extends StatelessWidget {
       body: Center(
         child: RaisedButton(
           child: Text('login'),
-          onPressed: () {authRepository.setAuthState(AuthState.Authenticated);},
+          onPressed: () {
+            Provider.of<AuthRepository>(context, listen: false).setState(AuthState.Authenticated);
+          },
         )
       ),
     );
@@ -48,7 +64,9 @@ class MainPage extends StatelessWidget {
             Text('Main Page'),
             RaisedButton(
               child: Text('logout'),
-              onPressed: () {authRepository.setAuthState(AuthState.UnAuthenticated);},
+              onPressed: () {
+                Provider.of<AuthRepository>(context, listen: false).setState(AuthState.UnAuthenticated);
+              },
             )
           ],
         ),
@@ -57,30 +75,11 @@ class MainPage extends StatelessWidget {
   }
 }
 
-enum AuthState { Authenticated, UnAuthenticated }
-
-class AuthRepository {
-  final _streamController = StreamController<AuthState>()..add(AuthState.UnAuthenticated);
-
-  get authStream => _streamController.stream;
-
-  void setAuthState(AuthState state) {
-    _streamController.add(state);
-  }
-}
-
 class RootPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<AuthState>(
-      stream: authRepository.authStream,
-      builder: (BuildContext context, AsyncSnapshot snapshot) {
-        if (snapshot.data == AuthState.UnAuthenticated) {
-          return LoginPage();
-        }
-        return MainPage();
-      }
-    );
+    AuthState authState = Provider.of<AuthRepository>(context).authState;
+    return authState == AuthState.UnAuthenticated ? LoginPage() : MainPage();
   }
 }
 
